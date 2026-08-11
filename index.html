@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Receptionist Demo — Marigold Hair Studio</title>
+</head>
+<body>
+<style>
+  :root{
+    --ground:#F7F7F4; --surface:#FFFFFF; --ink:#1F2420; --muted:#5C645C;
+    --accent:#2E5E4E; --accent-strong:#234A3E; --accent-soft:#E4EEE9;
+    --copper:#B0722F; --copper-soft:#F6EBDD;
+    --line:#E3E5E0; --chrome:#1B211D; --chrome-ink:#E8EAE5;
+    --ok:#2E6E45; --warn:#9A6A1F;
+    --shadow:0 10px 30px rgba(31,36,32,.12);
+    --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#141815; --surface:#1C211D; --ink:#E8EAE5; --muted:#9AA39A;
+      --accent:#6FBF9F; --accent-strong:#8FD4B7; --accent-soft:#22332C;
+      --copper:#D9955A; --copper-soft:#33281C;
+      --line:#2A302B; --chrome:#0E110F; --chrome-ink:#E8EAE5;
+      --ok:#6FBF9F; --warn:#D9AE5A;
+      --shadow:0 10px 30px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#141815; --surface:#1C211D; --ink:#E8EAE5; --muted:#9AA39A;
+    --accent:#6FBF9F; --accent-strong:#8FD4B7; --accent-soft:#22332C;
+    --copper:#D9955A; --copper-soft:#33281C;
+    --line:#2A302B; --chrome:#0E110F; --chrome-ink:#E8EAE5;
+    --ok:#6FBF9F; --warn:#D9AE5A;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"]{
+    --ground:#F7F7F4; --surface:#FFFFFF; --ink:#1F2420; --muted:#5C645C;
+    --accent:#2E5E4E; --accent-strong:#234A3E; --accent-soft:#E4EEE9;
+    --copper:#B0722F; --copper-soft:#F6EBDD;
+    --line:#E3E5E0; --chrome:#1B211D; --chrome-ink:#E8EAE5;
+    --ok:#2E6E45; --warn:#9A6A1F;
+    --shadow:0 10px 30px rgba(31,36,32,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:16px; line-height:1.55;
+  }
+  .serif{font-family:"Palatino Linotype",Palatino,Georgia,serif}
+  button{font:inherit; cursor:pointer}
+  [hidden]{display:none !important}
+
+  /* ---------- demo chrome ---------- */
+  .chrome{
+    position:sticky; top:0; z-index:40;
+    background:var(--chrome); color:var(--chrome-ink);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:10px 18px; flex-wrap:wrap;
+  }
+  .chrome-label{display:flex; align-items:center; gap:9px; font-size:13px; letter-spacing:.04em; text-transform:uppercase}
+  .chrome-label .dot{width:8px;height:8px;border-radius:50%;background:#7BD3AC;box-shadow:0 0 0 3px rgba(123,211,172,.25)}
+  .toggle{display:flex; gap:4px; background:rgba(255,255,255,.08); padding:4px; border-radius:999px}
+  .toggle button{
+    border:0; border-radius:999px; padding:6px 16px; font-size:13.5px;
+    background:transparent; color:var(--chrome-ink); position:relative;
+  }
+  .toggle button.active{background:var(--chrome-ink); color:var(--chrome); font-weight:600}
+  .toggle .badge{
+    position:absolute; top:-4px; right:-2px; min-width:17px; height:17px; border-radius:999px;
+    background:#D9955A; color:#1B211D; font-size:11px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; padding:0 4px;
+  }
+
+  /* ---------- customer site ---------- */
+  .site{max-width:960px; margin:0 auto; padding:0 22px 120px}
+  .site-nav{display:flex; align-items:baseline; justify-content:space-between; padding:26px 0 8px; gap:10px; flex-wrap:wrap}
+  .site-nav .brand{font-size:21px; letter-spacing:.01em}
+  .site-nav .hours-chip{font-size:13px; color:var(--muted)}
+  .hero{padding:56px 0 40px; border-bottom:1px solid var(--line)}
+  .hero h1{
+    font-size:clamp(34px,6vw,54px); line-height:1.08; margin:0 0 16px; font-weight:500;
+    text-wrap:balance; max-width:14ch;
+  }
+  .hero p{max-width:52ch; color:var(--muted); margin:0 0 26px}
+  .cta{
+    display:inline-flex; align-items:center; gap:9px;
+    background:var(--accent); color:#fff; border:0; border-radius:999px;
+    padding:12px 22px; font-size:15.5px; font-weight:600;
+  }
+  :root[data-theme="dark"] .cta, :root:not([data-theme="light"]) .cta{color:#fff}
+  @media (prefers-color-scheme: dark){ .cta{color:#10241C} }
+  :root[data-theme="dark"] .cta{color:#10241C}
+  :root[data-theme="light"] .cta{color:#fff}
+  .cta:hover{background:var(--accent-strong)}
+  .section{padding:40px 0; border-bottom:1px solid var(--line)}
+  .section h2{font-size:23px; font-weight:500; margin:0 0 20px}
+  .services{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px}
+  .service{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px; display:flex; justify-content:space-between; gap:10px; align-items:baseline;
+  }
+  .service .price{font-variant-numeric:tabular-nums; color:var(--accent); font-weight:600; white-space:nowrap}
+  .info-cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:28px; color:var(--muted); font-size:15px}
+  .info-cols strong{color:var(--ink); display:block; margin-bottom:6px; font-weight:600}
+  .site-foot{padding:30px 0 0; color:var(--muted); font-size:13.5px}
+
+  /* ---------- chat widget ---------- */
+  .chat-fab{
+    position:fixed; right:22px; bottom:22px; z-index:50;
+    width:58px; height:58px; border-radius:50%; border:0;
+    background:var(--accent); color:#fff; font-size:24px; box-shadow:var(--shadow);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .chat{
+    position:fixed; right:22px; bottom:22px; z-index:60;
+    width:min(390px, calc(100vw - 24px)); height:min(560px, calc(100vh - 90px));
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden;
+  }
+  @media (max-width:480px){ .chat{right:12px; bottom:12px} }
+  .chat-head{
+    background:var(--accent); color:#fff; padding:13px 16px;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+  }
+  .chat-head .who{display:flex; flex-direction:column; line-height:1.25}
+  .chat-head .who b{font-size:15px; font-weight:600}
+  .chat-head .who span{font-size:12px; opacity:.85}
+  .chat-head button{background:transparent; border:0; color:#fff; font-size:19px; padding:2px 6px}
+  .chat-log{flex:1; overflow-y:auto; padding:16px 14px; display:flex; flex-direction:column; gap:10px}
+  .msg{max-width:82%; padding:9px 13px; border-radius:14px; font-size:14.5px; white-space:pre-line}
+  .msg.bot{background:var(--accent-soft); color:var(--ink); border-bottom-left-radius:4px; align-self:flex-start}
+  .msg.user{background:var(--accent); color:#fff; border-bottom-right-radius:4px; align-self:flex-end}
+  @media (prefers-color-scheme: dark){ .msg.user{color:#10241C} }
+  :root[data-theme="dark"] .msg.user{color:#10241C}
+  :root[data-theme="light"] .msg.user{color:#fff}
+  .typing{align-self:flex-start; color:var(--muted); font-size:13px; padding:2px 6px}
+  .chips{display:flex; flex-wrap:wrap; gap:7px; padding:0 14px 10px}
+  .chips button{
+    border:1px solid var(--accent); color:var(--accent); background:transparent;
+    border-radius:999px; padding:6px 13px; font-size:13px;
+  }
+  .chips button:hover{background:var(--accent-soft)}
+  .chat-input{display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line)}
+  .chat-input input{
+    flex:1; border:1px solid var(--line); border-radius:999px; padding:9px 15px;
+    font:inherit; font-size:14.5px; background:var(--ground); color:var(--ink); outline:none;
+  }
+  .chat-input input:focus{border-color:var(--accent)}
+  .chat-input button{
+    border:0; background:var(--accent); color:#fff; border-radius:999px; padding:0 18px; font-weight:600;
+  }
+  @media (prefers-color-scheme: dark){ .chat-input button{color:#10241C} }
+  :root[data-theme="dark"] .chat-input button{color:#10241C}
+  :root[data-theme="light"] .chat-input button{color:#fff}
+
+  /* ---------- dashboard ---------- */
+  .dash{max-width:1060px; margin:0 auto; padding:26px 22px 80px}
+  .dash-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:22px}
+  .dash-head h1{font-size:24px; font-weight:600; margin:0}
+  .dash-head .sub{color:var(--muted); font-size:14px}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:26px}
+  .stat{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px}
+  .stat .n{font-size:28px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1}
+  .stat .l{font-size:13px; color:var(--muted); margin-top:3px}
+  .stat .d{font-size:12px; color:var(--ok); margin-top:5px}
+  .dash-grid{display:grid; grid-template-columns:1.15fr .85fr; gap:16px; align-items:start}
+  @media (max-width:820px){ .dash-grid{grid-template-columns:1fr} }
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden}
+  .panel > h2{
+    font-size:13px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted);
+    margin:0; padding:13px 16px; border-bottom:1px solid var(--line); font-weight:600;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .panel-col{display:flex; flex-direction:column; gap:16px}
+  .appt{display:flex; gap:14px; padding:13px 16px; border-bottom:1px solid var(--line); align-items:center}
+  .appt:last-child{border-bottom:0}
+  .appt .time{font-variant-numeric:tabular-nums; font-weight:600; min-width:72px; font-size:14.5px}
+  .appt .who{flex:1; min-width:0}
+  .appt .who b{font-weight:600; font-size:14.5px}
+  .appt .who span{display:block; color:var(--muted); font-size:13px}
+  .chip{
+    font-size:11.5px; padding:3px 9px; border-radius:999px; white-space:nowrap; font-weight:600;
+  }
+  .chip.ai{background:var(--accent-soft); color:var(--accent)}
+  .chip.new{background:var(--copper-soft); color:var(--copper)}
+  .chip.ok{background:var(--accent-soft); color:var(--ok)}
+  .feed-item{display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); font-size:13.5px}
+  .feed-item:last-child{border-bottom:0}
+  .feed-item .t{color:var(--muted); font-variant-numeric:tabular-nums; min-width:62px; font-size:12.5px; padding-top:1px}
+  .feed-item .ico{
+    width:24px; height:24px; border-radius:6px; background:var(--copper-soft); color:var(--copper);
+    display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0;
+  }
+  .feed-item p{margin:0}
+  .lead{padding:13px 16px; border-bottom:1px solid var(--line)}
+  .lead:last-child{border-bottom:0}
+  .lead .lrow{display:flex; justify-content:space-between; gap:8px; align-items:baseline}
+  .lead b{font-size:14.5px}
+  .lead .q{color:var(--muted); font-size:13.5px; margin:4px 0 9px}
+  .lead .draft{
+    background:var(--ground); border:1px dashed var(--line); border-radius:8px;
+    padding:9px 12px; font-size:13px; color:var(--ink); margin-bottom:9px;
+  }
+  .approve{
+    border:1px solid var(--accent); background:transparent; color:var(--accent);
+    border-radius:999px; padding:5px 14px; font-size:12.5px; font-weight:600;
+  }
+  .approve:hover{background:var(--accent-soft)}
+  .approve.done{border-color:var(--line); color:var(--muted); cursor:default; background:transparent}
+  .demo-note{
+    max-width:1060px; margin:26px auto 0; padding:0 22px; color:var(--muted); font-size:13px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important}
+  }
+  @keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .msg,.feed-item.live,.appt.live{animation:pop .25s ease}
+</style>
+
+<header class="chrome">
+  <div class="chrome-label"><span class="dot"></span> AI receptionist &middot; interactive demo</div>
+  <nav class="toggle" aria-label="Demo view">
+    <button data-view="site" class="active" id="btn-site">Customer view</button>
+    <button data-view="dash" id="btn-dash">Owner dashboard <span class="badge" id="dash-badge" hidden></span></button>
+  </nav>
+</header>
+
+<!-- ================= CUSTOMER VIEW ================= -->
+<main class="site" id="view-site">
+  <div class="site-nav">
+    <div class="brand serif">Marigold Hair Studio</div>
+    <div class="hours-chip">Tue&ndash;Sat 9:00&ndash;18:00 &middot; 214 Marigold Lane</div>
+  </div>
+
+  <section class="hero">
+    <h1 class="serif">Good hair, without the phone tag.</h1>
+    <p>Marigold is a four-chair neighborhood studio. Our assistant answers instantly, day or night: it books your appointment, answers questions, and texts you a confirmation, so nobody waits on hold.</p>
+    <button class="cta" id="open-chat">&#10000; Book via chat &mdash; replies in seconds</button>
+  </section>
+
+  <section class="section">
+    <h2 class="serif">Services</h2>
+    <div class="services">
+      <div class="service"><span>Women&rsquo;s cut &amp; style</span><span class="price">$65</span></div>
+      <div class="service"><span>Men&rsquo;s cut</span><span class="price">$40</span></div>
+      <div class="service"><span>Kids (under 12)</span><span class="price">$25</span></div>
+      <div class="service"><span>Single-process color</span><span class="price">from $120</span></div>
+      <div class="service"><span>Balayage / highlights</span><span class="price">from $180</span></div>
+      <div class="service"><span>Blowout</span><span class="price">$45</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="serif">Visit us</h2>
+    <div class="info-cols">
+      <div><strong>Hours</strong>Tuesday to Saturday, 9:00 to 18:00. Closed Sunday and Monday. Last color appointment at 16:00.</div>
+      <div><strong>Location</strong>214 Marigold Lane. Free 2-hour parking on Elm Street, one block over.</div>
+      <div><strong>Policies</strong>Free cancellation up to 24 hours before your appointment. Walk-ins welcome when a chair is free.</div>
+    </div>
+  </section>
+
+  <div class="site-foot">Marigold Hair Studio is a fictional business created for this demo.</div>
+</main>
+
+<!-- ================= OWNER DASHBOARD ================= -->
+<main class="dash" id="view-dash" hidden>
+  <div class="dash-head">
+    <h1>Front desk &mdash; Marigold Hair Studio</h1>
+    <div class="sub" id="dash-date"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="stat-bookings">12</div><div class="l">Bookings this week</div><div class="d" id="stat-bookings-d">3 via AI receptionist</div></div>
+    <div class="stat"><div class="n">9</div><div class="l">After-hours chats handled</div><div class="d">0 missed calls</div></div>
+    <div class="stat"><div class="n" id="stat-leads">2</div><div class="l">Leads awaiting approval</div><div class="d">Follow-ups drafted for you</div></div>
+    <div class="stat"><div class="n">4 sec</div><div class="l">Avg. first response</div><div class="d">was ~3 hrs by phone</div></div>
+  </div>
+
+  <div class="dash-grid">
+    <div class="panel-col">
+      <section class="panel">
+        <h2>Today&rsquo;s schedule <span class="chip ai">synced to calendar</span></h2>
+        <div id="schedule">
+          <div class="appt"><span class="time">9:30</span><span class="who"><b>Dana R.</b><span>Balayage &middot; booked by phone</span></span></div>
+          <div class="appt"><span class="time">11:00</span><span class="who"><b>Priya S.</b><span>Women&rsquo;s cut &middot; via AI receptionist</span></span><span class="chip ai">AI</span></div>
+          <div class="appt"><span class="time">13:30</span><span class="who"><b>Marcus L.</b><span>Men&rsquo;s cut &middot; via AI receptionist</span></span><span class="chip ai">AI</span></div>
+          <div class="appt"><span class="time">15:00</span><span class="who"><b>Walk-in hold</b><span>Chair 2 kept free</span></span></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Leads inbox <span class="chip new">approve before send</span></h2>
+        <div id="leads">
+          <div class="lead">
+            <div class="lrow"><b>Sam T.</b><span class="chip new">needs approval</span></div>
+            <div class="q">&ldquo;Do you do bridal styling for a party of 4? Wedding is Oct 3.&rdquo;</div>
+            <div class="draft">Drafted reply: &ldquo;Hi Sam! Yes, we do bridal parties. For 4 people we&rsquo;d block the morning of Oct 3 &mdash; it&rsquo;s $95/person including trials. Want me to pencil you in?&rdquo;</div>
+            <button class="approve">Approve &amp; send</button>
+          </div>
+          <div class="lead">
+            <div class="lrow"><b>Alexis M.</b><span class="chip new">needs approval</span></div>
+            <div class="q">Asked about color correction after a box-dye mishap. Left number: (555) 014-2231.</div>
+            <div class="draft">Drafted reply: &ldquo;Hi Alexis, color corrections need a quick consult first &mdash; free, 10 minutes. We have Thursday 4:30 open. Should I book it?&rdquo;</div>
+            <button class="approve">Approve &amp; send</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Automation activity</h2>
+      <div id="feed">
+        <div class="feed-item"><span class="t">08:02</span><span class="ico">&#9993;</span><p>Sent 24-hour reminder texts to 3 clients booked tomorrow.</p></div>
+        <div class="feed-item"><span class="t">08:02</span><span class="ico">&#128197;</span><p>Synced today&rsquo;s schedule to Google Calendar.</p></div>
+        <div class="feed-item"><span class="t">08:15</span><span class="ico">&#128172;</span><p>Answered an after-hours chat from 23:40 last night (pricing question) and captured the lead.</p></div>
+        <div class="feed-item"><span class="t">10:05</span><span class="ico">&#8635;</span><p>No-show recovery: texted Jordan K. a rebooking link after yesterday&rsquo;s missed slot.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <p class="demo-note">Demo build. Chat responses in this sample are scripted for reliability; the production agent runs on Claude, connected to the business&rsquo;s real calendar, SMS line, and customer list. Nothing sends without owner approval where it matters.</p>
+</main>
+
+<!-- ================= CHAT WIDGET ================= -->
+<button class="chat-fab" id="chat-fab" aria-label="Open chat" hidden>&#128172;</button>
+<div class="chat" id="chat" role="dialog" aria-label="Chat with Marigold assistant">
+  <div class="chat-head">
+    <div class="who"><b>Marigold assistant</b><span>Typically replies in seconds &middot; 24/7</span></div>
+    <button id="chat-min" aria-label="Minimize chat">&ndash;</button>
+  </div>
+  <div class="chat-log" id="log"></div>
+  <div class="chips" id="chips"></div>
+  <form class="chat-input" id="chat-form">
+    <input id="chat-text" type="text" placeholder="Type a message&hellip;" autocomplete="off" aria-label="Message">
+    <button type="submit">Send</button>
+  </form>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- view switching ---------- */
+  var btnSite = document.getElementById('btn-site');
+  var btnDash = document.getElementById('btn-dash');
+  var viewSite = document.getElementById('view-site');
+  var viewDash = document.getElementById('view-dash');
+  var badge = document.getElementById('dash-badge');
+  var chat = document.getElementById('chat');
+  var fab = document.getElementById('chat-fab');
+  var newForOwner = 0;
+
+  function show(view){
+    var isSite = view === 'site';
+    viewSite.hidden = !isSite;
+    viewDash.hidden = isSite;
+    btnSite.classList.toggle('active', isSite);
+    btnDash.classList.toggle('active', !isSite);
+    chat.hidden = !isSite || chatMin;
+    fab.hidden = !isSite || !chatMin;
+    if(!isSite){ newForOwner = 0; badge.hidden = true; }
+  }
+  btnSite.addEventListener('click', function(){ show('site'); });
+  btnDash.addEventListener('click', function(){ show('dash'); });
+
+  function pingOwner(){
+    newForOwner++;
+    badge.textContent = newForOwner;
+    badge.hidden = false;
+  }
+
+  /* ---------- dashboard date ---------- */
+  var now = new Date();
+  document.getElementById('dash-date').textContent =
+    now.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+
+  /* ---------- leads approve ---------- */
+  document.getElementById('leads').addEventListener('click', function(e){
+    var b = e.target.closest('.approve');
+    if(!b || b.classList.contains('done')) return;
+    b.classList.add('done');
+    b.textContent = 'Sent \u2713';
+    var chipEl = b.closest('.lead').querySelector('.chip');
+    chipEl.className = 'chip ok';
+    chipEl.textContent = 'follow-up sent';
+    var name = b.closest('.lead').querySelector('b').textContent;
+    addFeed('\u2709', 'Owner approved follow-up to ' + name + ' \u2014 text sent.');
+    var sl = document.getElementById('stat-leads');
+    sl.textContent = Math.max(0, parseInt(sl.textContent,10) - 1);
+  });
+
+  function fmtTime(d){
+    return d.toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit', hour12:false});
+  }
+  function addFeed(icon, text){
+    var feed = document.getElementById('feed');
+    var el = document.createElement('div');
+    el.className = 'feed-item live';
+    el.innerHTML = '<span class="t">' + fmtTime(new Date()) + '</span><span class="ico"></span><p></p>';
+    el.querySelector('.ico').textContent = icon;
+    el.querySelector('p').textContent = text;
+    feed.appendChild(el);
+  }
+  function addBooking(name, service, when){
+    var sched = document.getElementById('schedule');
+    var el = document.createElement('div');
+    el.className = 'appt live';
+    el.innerHTML = '<span class="time"></span><span class="who"><b></b><span></span></span><span class="chip new">NEW &middot; AI</span>';
+    el.querySelector('.time').textContent = when;
+    el.querySelector('b').textContent = name;
+    el.querySelector('.who span').textContent = service + ' \u00b7 via AI receptionist, just now';
+    sched.appendChild(el);
+    var sb = document.getElementById('stat-bookings');
+    sb.textContent = parseInt(sb.textContent,10) + 1;
+    var d = document.getElementById('stat-bookings-d');
+    d.textContent = (parseInt(d.textContent,10) + 1) + ' via AI receptionist';
+  }
+  function addLead(name, phone, note){
+    var leads = document.getElementById('leads');
+    var el = document.createElement('div');
+    el.className = 'lead';
+    el.innerHTML = '<div class="lrow"><b></b><span class="chip new">needs approval</span></div>' +
+      '<div class="q"></div><div class="draft"></div><button class="approve">Approve &amp; send</button>';
+    el.querySelector('b').textContent = name + (phone ? ' \u00b7 ' + phone : '');
+    el.querySelector('.q').textContent = '\u201C' + note + '\u201D';
+    el.querySelector('.draft').textContent = 'Drafted reply: \u201CHi ' + name.split(' ')[0] + '! Thanks for reaching out \u2014 happy to help with that. When works for a quick call or visit?\u201D';
+    leads.appendChild(el);
+    var sl = document.getElementById('stat-leads');
+    sl.textContent = parseInt(sl.textContent,10) + 1;
+  }
+
+  /* ---------- chat widget plumbing ---------- */
+  var log = document.getElementById('log');
+  var chipsEl = document.getElementById('chips');
+  var form = document.getElementById('chat-form');
+  var input = document.getElementById('chat-text');
+  var chatMin = false;
+
+  document.getElementById('chat-min').addEventListener('click', function(){
+    chatMin = true; chat.hidden = true; fab.hidden = false;
+  });
+  fab.addEventListener('click', function(){
+    chatMin = false; chat.hidden = false; fab.hidden = true; input.focus();
+  });
+  document.getElementById('open-chat').addEventListener('click', function(){
+    chatMin = false; chat.hidden = false; fab.hidden = true; input.focus();
+    input.scrollIntoView({block:'nearest'});
+  });
+
+  function scrollLog(){ log.scrollTop = log.scrollHeight; }
+  function userSay(text){
+    var el = document.createElement('div');
+    el.className = 'msg user'; el.textContent = text;
+    log.appendChild(el); scrollLog();
+  }
+  var typingEl = null;
+  function botSay(text, chips, delay){
+    setChips([]);
+    typingEl = document.createElement('div');
+    typingEl.className = 'typing'; typingEl.textContent = 'Marigold assistant is typing\u2026';
+    log.appendChild(typingEl); scrollLog();
+    setTimeout(function(){
+      if(typingEl){ typingEl.remove(); typingEl = null; }
+      var el = document.createElement('div');
+      el.className = 'msg bot'; el.textContent = text;
+      log.appendChild(el); scrollLog();
+      setChips(chips || []);
+    }, delay == null ? 650 : delay);
+  }
+  function setChips(list){
+    chipsEl.innerHTML = '';
+    list.forEach(function(c){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = c;
+      b.addEventListener('click', function(){ handleInput(c); });
+      chipsEl.appendChild(b);
+    });
+  }
+
+  /* ---------- the "brain": intents + booking flow ---------- */
+  var flow = null;       // null | 'service' | 'when' | 'name' | 'phone' | 'confirm' | 'msg-name' | 'msg-phone'
+  var draft = {};
+  var missCount = 0;
+  var HOME_CHIPS = ['Book an appointment', 'Prices', 'Hours & location'];
+  var SERVICES = [
+    {k:/balayage|highlight/i, name:"Balayage / highlights"},
+    {k:/color|dye|roots/i,    name:"Single-process color"},
+    {k:/blow ?out|blow ?dry/i,name:"Blowout"},
+    {k:/\bkids?\b|\bchild/i,  name:"Kids cut"},
+    {k:/\bwomen|\bladies/i,   name:"Women\u2019s cut & style"},
+    {k:/\bmen\b|\bmen'?s\b|beard|\bfade\b|barber/i, name:"Men\u2019s cut"},
+    {k:/\bcut\b|\btrim\b|haircut/i, name:"Haircut"}
+  ];
+
+  function detectService(t){
+    for(var i=0;i<SERVICES.length;i++){ if(SERVICES[i].k.test(t)) return SERVICES[i].name; }
+    return null;
+  }
+  function looksLikePhone(t){ return (t.replace(/\D/g,'').length) >= 7; }
+  function tidyWhen(t){
+    var s = t.trim().replace(/^i(\u2019|')?d like\s*/i,'').replace(/^on\s+/i,'');
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function startBooking(text){
+    flow = 'service'; draft = {};
+    var svc = detectService(text || '');
+    if(svc && svc !== 'Haircut'){
+      draft.service = svc;
+      flow = 'when';
+      botSay('Great \u2014 ' + svc + ' it is. When would you like to come in? We\u2019re open Tue\u2013Sat, 9:00\u201318:00.',
+        ['Tomorrow 2pm', 'Saturday morning', 'Thursday after 4']);
+    } else {
+      botSay('Happy to get you booked! What service are you after?',
+        ['Women\u2019s cut & style', 'Men\u2019s cut', 'Balayage / highlights', 'Single-process color']);
+    }
+  }
+
+  function handleBookingStep(text){
+    if(flow === 'service'){
+      draft.service = detectService(text) || text.trim();
+      flow = 'when';
+      botSay('Perfect. When would you like to come in? We\u2019re open Tue\u2013Sat, 9:00\u201318:00.',
+        ['Tomorrow 2pm', 'Saturday morning', 'Thursday after 4']);
+    } else if(flow === 'when'){
+      draft.when = tidyWhen(text);
+      flow = 'name';
+      botSay(draft.when + ' works \u2014 that chair is free. What name should I put it under?');
+    } else if(flow === 'name'){
+      draft.name = text.trim().replace(/^i(\u2019|')?m\s+/i,'').replace(/^my name is\s+/i,'');
+      flow = 'phone';
+      botSay('Thanks, ' + draft.name.split(' ')[0] + '! And a mobile number for your confirmation text?');
+    } else if(flow === 'phone'){
+      if(!looksLikePhone(text)){
+        botSay('That doesn\u2019t look like a full number \u2014 mind sending it with area code? (e.g. 555 014 2231)');
+        return;
+      }
+      draft.phone = text.trim();
+      flow = 'confirm';
+      botSay('Here\u2019s what I have:\n\u2022 ' + draft.service + '\n\u2022 ' + draft.when + '\n\u2022 ' + draft.name + ', ' + draft.phone + '\n\nShall I lock it in?',
+        ['Yes, book it', 'Change something']);
+    } else if(flow === 'confirm'){
+      if(/yes|book|confirm|lock|yep|sure|go/i.test(text)){
+        flow = null;
+        botSay('Done! You\u2019re booked: ' + draft.service + ', ' + draft.when + '. \u2709 A confirmation text is on its way to ' + draft.phone + ', and you\u2019ll get a reminder 24 hours before. See you soon, ' + draft.name.split(' ')[0] + '!',
+          ['Book another', 'Hours & location'], 850);
+        // ripple into the owner dashboard
+        var b = draft;
+        addBooking(b.name, b.service, shortWhen(b.when));
+        setTimeout(function(){ addFeed('\u2709', 'Confirmation text sent to ' + b.name + ' (' + b.phone + ').'); }, 400);
+        setTimeout(function(){ addFeed('\u23F0', 'Reminder scheduled 24h before ' + b.name.split(' ')[0] + '\u2019s appointment.'); }, 800);
+        setTimeout(function(){ addFeed('\u{1F4C5}', 'Added to Google Calendar: ' + b.service + ' \u2014 ' + b.when + '.'); }, 1200);
+        pingOwner(); pingOwner(); // booking + automation
+        draft = {};
+      } else {
+        flow = 'service';
+        botSay('No problem \u2014 let\u2019s redo it. What service would you like?',
+          ['Women\u2019s cut & style', 'Men\u2019s cut', 'Balayage / highlights']);
+      }
+    }
+  }
+  function shortWhen(w){
+    var m = w.match(/\d{1,2}([:.]\d{2})?\s*(am|pm)?/i);
+    return m ? m[0].replace('.',':') : w.split(' ')[0];
+  }
+
+  function handleMessageFlow(text){
+    if(flow === 'msg-name'){
+      draft.name = text.trim();
+      flow = 'msg-phone';
+      botSay('Thanks, ' + draft.name.split(' ')[0] + '. Best number to reach you?');
+    } else if(flow === 'msg-phone'){
+      if(!looksLikePhone(text)){
+        botSay('Could you send a full number with area code?');
+        return;
+      }
+      draft.phone = text.trim();
+      flow = null;
+      botSay('Got it \u2014 I\u2019ve passed this to the owner with a drafted reply. You\u2019ll hear back today. Anything else?',
+        HOME_CHIPS, 800);
+      addLead(draft.name, draft.phone, draft.note || 'Left a message via chat.');
+      addFeed('\u{1F4DD}', 'New lead captured: ' + draft.name + '. Follow-up drafted, waiting for owner approval.');
+      pingOwner();
+      draft = {};
+    }
+  }
+
+  function handleInput(text){
+    text = String(text || '').trim();
+    if(!text) return;
+    userSay(text);
+
+    if(flow === 'msg-name' || flow === 'msg-phone'){ handleMessageFlow(text); return; }
+    if(flow){ handleBookingStep(text); return; }
+
+    var t = text.toLowerCase();
+
+    if(/book|appoint|schedule|reserve|come in|another/i.test(t) || detectService(t) && /want|need|get|for a/i.test(t)){
+      startBooking(text); return;
+    }
+    if(/price|cost|how much|rate|charge/.test(t)){
+      botSay('Here\u2019s our menu:\n\u2022 Women\u2019s cut & style \u2014 $65\n\u2022 Men\u2019s cut \u2014 $40\n\u2022 Kids \u2014 $25\n\u2022 Color \u2014 from $120\n\u2022 Balayage \u2014 from $180\n\u2022 Blowout \u2014 $45\n\nWant me to book you in?',
+        ['Book an appointment', 'Hours & location']);
+      return;
+    }
+    if(/hour|open|close|timing|when.*(open|close)|location|address|where|park/.test(t)){
+      botSay('We\u2019re at 214 Marigold Lane \u2014 free 2-hour parking on Elm Street, one block over. Open Tuesday to Saturday, 9:00\u201318:00 (last color at 16:00). Closed Sun\u2013Mon.',
+        ['Book an appointment', 'Prices']);
+      return;
+    }
+    if(/walk[- ]?in/.test(t)){
+      botSay('Walk-ins are welcome whenever a chair is free \u2014 we keep one open most afternoons. But booking takes 30 seconds and guarantees your spot. Want me to?',
+        ['Book an appointment', 'Hours & location']);
+      return;
+    }
+    if(/cancel|reschedul|move my|change my/.test(t)){
+      draft.note = 'Wants to cancel or reschedule an existing appointment.';
+      flow = 'msg-name';
+      botSay('No problem \u2014 I\u2019ll sort that with the owner. What name is the appointment under?');
+      return;
+    }
+    if(/human|person|real|owner|call me|talk to|speak/.test(t)){
+      draft.note = 'Asked to speak with a person.';
+      flow = 'msg-name';
+      botSay('Of course \u2014 I\u2019ll have the owner text you personally. What\u2019s your name?');
+      return;
+    }
+    if(/service|offer|do you do|what.*do you/.test(t)){
+      botSay('We do cuts (women\u2019s, men\u2019s, kids), color, balayage and highlights, and blowouts. Anything specific you\u2019re after?',
+        ['Book an appointment', 'Prices']);
+      return;
+    }
+    if(/^(hi|hey|hello|yo|good (morning|afternoon|evening))\b/.test(t)){
+      botSay('Hi there! I\u2019m Marigold\u2019s assistant \u2014 I can book you in, share prices, or answer anything about the studio. What can I do for you?',
+        HOME_CHIPS);
+      return;
+    }
+    if(/thank|thanks|great|awesome|perfect/.test(t)){
+      botSay('Anytime! Anything else I can help with?', HOME_CHIPS);
+      return;
+    }
+
+    // fallback: capture as a lead
+    missCount++;
+    draft.note = text;
+    if(missCount === 1){
+      botSay('I want to make sure you get a proper answer on that. I can take your details and have the owner text you back today \u2014 or I can help with bookings, prices, and hours right now.',
+        ['Leave a message', 'Book an appointment', 'Prices']);
+    } else {
+      draft.note = text;
+      flow = 'msg-name';
+      botSay('Let me take this to the owner so you get a real answer. What\u2019s your name?');
+    }
+    if(/leave a message/i.test(t)){
+      draft.note = draft.note || 'Left a message via chat.';
+      flow = 'msg-name';
+    }
+  }
+
+  // "Leave a message" chip needs its own path (it matches fallback otherwise)
+  var _origHandle = handleInput;
+  handleInput = function(text){
+    if(/^leave a message$/i.test(String(text).trim())){
+      userSay(text);
+      draft.note = draft.note || 'Left a message via chat.';
+      flow = 'msg-name';
+      botSay('Sure \u2014 what\u2019s your name?');
+      return;
+    }
+    _origHandle(text);
+  };
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = input.value;
+    input.value = '';
+    handleInput(v);
+  });
+
+  /* ---------- kickoff ---------- */
+  show('site');
+  botSay('Hi! Welcome to Marigold Hair Studio \u{1F33C} I can book your appointment, share prices, or answer questions \u2014 even at 2am. How can I help?',
+    HOME_CHIPS, 500);
+})();
+</script>
+
+</body>
+</html>
